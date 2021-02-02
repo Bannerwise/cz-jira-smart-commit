@@ -31,11 +31,11 @@ function prompter(cz, commit) {
   inquirer.prompt([
     {
       type: 'input',
-      name: 'message',
-      message: 'GitHub commit message (required):\n',
+      name: 'subject',
+      message: 'Commit subject (required):\n',
       validate: function(input) {
         if (!input) {
-          return 'empty commit message';
+          return 'Empty subject';
         } else {
           return true;
         }
@@ -43,15 +43,45 @@ function prompter(cz, commit) {
     },
     {
       type: 'input',
+      name: 'message',
+      message: 'Commit message (optional):\n',
+    },
+    {
+      type: 'input',
       name: 'issues',
-      message: 'Jira Issue ID(s) (required):\n',
-      validate: function(input) {
-        if (!input) {
-          return 'Must specify issue IDs, otherwise, just use a normal commit message';
+      message: 'Jira Issue ID(s):\n',
+    },
+    {
+      type: 'input',
+      name: 'time',
+      message: 'Time spent (in hours):\n',
+      validate: function (input) {
+        if (input) {
+          if (Number.isInteger(parseInt(input))) {
+            return true;
+          } else {
+            return 'Please only insert the number of hours (integer)';
+          }
         } else {
           return true;
         }
       }
+    },
+    {
+      type: 'input',
+      name: 'comment',
+      message: 'Jira comment (optional):\n'
+    },
+    {
+      type: 'confirm',
+      name: 'wbso',
+      message: 'WBSO billable?\n',
+      default: false
+    },
+    {
+      type: 'input',
+      name: 'peer',
+      message: 'Peer programmers:\n'
     },
     {
       type: 'input',
@@ -66,14 +96,10 @@ function prompter(cz, commit) {
       }
     },
     {
-      type: 'input',
-      name: 'time',
-      message: 'Time spent (i.e. 3h 15m) (optional):\n'
-    },
-    {
-      type: 'input',
-      name: 'comment',
-      message: 'Jira comment (optional):\n'
+      type: 'confirm',
+      name: 'confirm',
+      message: 'Confirm and commit? \n',
+      default: false
     },
   ]).then((answers) => {
     formatCommit(commit, answers);
@@ -81,13 +107,24 @@ function prompter(cz, commit) {
 }
 
 function formatCommit(commit, answers) {
-  commit(filter([
-    answers.message,
-    answers.issues,
-    answers.workflow ? '#' + answers.workflow : undefined,
-    answers.time ? '#time ' + answers.time : undefined,
-    answers.comment ? '#comment ' + answers.comment : undefined,
-  ]).join(' '));
+  if (answers.confirm) {
+    let head = filter([
+      answers.issues,
+      answers.subject,
+      answers.workflow ? '#' + answers.workflow : undefined,
+      answers.time ? '#time ' + answers.time.trim() + 'h' : undefined,
+      answers.comment ? '#comment ' + answers.comment : undefined,
+    ]).join(' ');
+    let body = filter([
+      answers.message ? answers.message : undefined,
+      answers.wbso ? '#wbso yes' : '#wbso no',
+      answers.peer ? '#peer ' + answers.peer : undefined,
+    ]).join('\n');
+    commit(head + '\n\n' + body);
+  }
+  else {
+    console.log("Commit cancelled.\n");
+  }
 }
 
 function filter(array) {
